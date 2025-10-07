@@ -5,7 +5,7 @@ import Record from '@/models/Record';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -13,9 +13,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await connectDB();
     const record = await Record.findOne({
-      _id: params.id,
+      _id: id,
       userId
     });
 
@@ -38,7 +40,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -46,11 +48,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     await connectDB();
 
     const record = await Record.findOneAndUpdate(
-      { _id: params.id, userId },
+      { _id: id, userId },
       { $set: body },
       { new: true }
     );
@@ -74,7 +77,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -82,10 +85,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await connectDB();
 
     const record = await Record.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       userId
     });
 
