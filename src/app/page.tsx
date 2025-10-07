@@ -3,8 +3,15 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Badge} from "@/components/ui/badge";
 import {TrendingDown, Home, Calendar, ArrowRight} from "lucide-react";
 import {SignedIn, SignedOut, SignInButton, SignUpButton, UserButton} from "@clerk/nextjs";
+import {auth} from "@clerk/nextjs/server";
+import {redirect} from "next/navigation";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+
+  const {userId} = await auth();
+  if (userId) {
+    redirect("/dashboard");
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Nav */}
