@@ -43,6 +43,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 .dark {
+  --radius: 0.625rem;
   --background: oklch(0.145 0.016 256.847); /* Slate-950 */
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.269 0.015 252.894); /* Slate-800 */
