@@ -1,5 +1,6 @@
 import {type ClassValue, clsx} from "clsx";
 import {twMerge} from "tailwind-merge";
+import {DebtType} from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -51,3 +52,25 @@ export function getMonthsBetween(startMonth: string, endMonth: string): string[]
 
   return months;
 }
+
+export const getDebtTypeLabel = (type: DebtType) => {
+  const labels: Record<DebtType, string> = {
+    [DebtType.CREDIT]: 'Credit',
+    [DebtType.CREDIT_CARD]: 'Credit Card',
+    [DebtType.ACCOUNT_LIMIT]: 'Account Limit',
+    [DebtType.LEASING]: 'Leasing',
+    [DebtType.OTHER]: 'Other'
+  };
+  return labels[type];
+};
+
+export const getDebtTypeColor = (type: DebtType) => {
+  const colors: Record<DebtType, string> = {
+    [DebtType.CREDIT]: 'bg-chart-2/10 text-chart-2 border-chart-2/20',
+    [DebtType.CREDIT_CARD]: 'bg-primary/10 text-primary border-primary/20',
+    [DebtType.ACCOUNT_LIMIT]: 'bg-chart-4/10 text-chart-4 border-chart-4/20',
+    [DebtType.LEASING]: 'bg-chart-3/10 text-chart-3 border-chart-3/20',
+    [DebtType.OTHER]: 'bg-muted text-muted-foreground border-border'
+  };
+  return colors[type];
+};

@@ -2,8 +2,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ISettings, IDebtSource, IRecord } from '@/lib/types';
+import {useState, useEffect} from 'react';
+import {ISettings, IDebtSource, IRecord, CalculatedRecord, CalculatedDebtSource} from '@/lib/types';
+import {calculateRecordsAndDebtSources} from "@/lib/calculations";
+import settings from "@/models/Settings";
 
 export function useSettings() {
   const [settings, setSettings] = useState<ISettings | null>(null);
@@ -28,7 +30,7 @@ export function useSettings() {
     try {
       const response = await fetch('/api/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update settings');
@@ -45,7 +47,7 @@ export function useSettings() {
     fetchSettings();
   }, []);
 
-  return { settings, loading, error, updateSettings, refetch: fetchSettings };
+  return {settings, loading, error, updateSettings, refetch: fetchSettings};
 }
 
 export function useDebtSources() {
@@ -71,7 +73,7 @@ export function useDebtSources() {
     try {
       const response = await fetch('/api/debt-sources', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to create debt source');
@@ -88,7 +90,7 @@ export function useDebtSources() {
     try {
       const response = await fetch(`/api/debt-sources/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update debt source');
@@ -152,7 +154,7 @@ export function useRecords() {
     try {
       const response = await fetch('/api/records', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
       if (!response.ok) {
@@ -172,7 +174,7 @@ export function useRecords() {
     try {
       const response = await fetch(`/api/records/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update record');
@@ -211,4 +213,75 @@ export function useRecords() {
     deleteRecord,
     refetch: fetchRecords
   };
+}
+
+export function useCalculatedRecordsAndDebts() {
+  const {records, deleteRecord, createRecord, updateRecord, loading: loadingRecords, error: recordsError, refetch: refetchRecords} = useRecords();
+  const {debtSources, loading: debtSourcesLoading, error: debtSourcesError, refetch: refetchDebtSources} = useDebtSources();
+  const {settings, loading: settingsLoading, error: settingsError, refetch: refetchSettings} = useSettings();
+
+  const [calculatedRecords, setCalculatedRecords] = useState<CalculatedRecord[]>([]);
+  const [calculatedDebts, setCalculatedDebts] = useState<CalculatedDebtSource[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log("Use effect")
+    if(loadingRecords || debtSourcesLoading || settingsLoading) {
+      console.log("Setting loading to true")
+      console.log()
+      setLoading(true);
+      setCalculatedRecords([]);
+      setCalculatedDebts([]);
+      return;
+    }
+
+    if(recordsError || debtSourcesError || settingsError) {
+      console.log("Setting error")
+      setLoading(false);
+      setError(recordsError || debtSourcesError || settingsError);
+    }
+
+    const [newCalculatedRecords, newCalculatedDebts] = calculateRecordsAndDebtSources(records, debtSources, settings as ISettings)
+    setCalculatedRecords(() => newCalculatedRecords)
+    setCalculatedDebts(() => newCalculatedDebts)
+    setLoading(false);
+    console.log("WTF")
+
+  }, [loadingRecords, records, debtSources, debtSourcesLoading, debtSourcesError, recordsError, settings, settingsLoading, settingsError]);
+
+  const refetch = async () => {
+    refetchRecords();
+    refetchDebtSources();
+    refetchSettings();
+  }
+
+  const deleteRecordAndRefetch = async (id: string) => {
+    await deleteRecord(id);
+    refetch();
+  }
+
+  const createRecordAndRefetch = async (data: Omit<IRecord, '_id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    await createRecord(data);
+    refetch();
+  }
+
+  const updateRecordAndRefetch = async (id: string, data: Partial<IRecord>) => {
+    await updateRecord(id, data);
+    refetch();
+  }
+
+  return {
+    calculatedRecords,
+    deleteRecord: deleteRecordAndRefetch,
+    createRecord: createRecordAndRefetch,
+    updateRecord: updateRecordAndRefetch,
+    calculatedDebts,
+    loading,
+    error,
+    refetch
+  };
+
+
 }

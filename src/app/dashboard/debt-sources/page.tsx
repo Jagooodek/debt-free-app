@@ -2,42 +2,21 @@
 
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, TrendingDown } from 'lucide-react';
-import { useDebtSources } from '@/hooks/useDebtTracker';
-import { formatCurrency } from '@/lib/utils';
-import { DebtType } from '@/lib/types';
-import { AddDebtSourceDialog } from '@/components/AddDebtSourceDialog';
+import {useState} from 'react';
+import {Button} from '@/components/ui/button';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
+import {Badge} from '@/components/ui/badge';
+import {Plus, Pencil, Trash2, TrendingDown} from 'lucide-react';
+import {useDebtSources} from '@/hooks/useDebtTracker';
+import {formatCurrency, getDebtTypeColor, getDebtTypeLabel} from '@/lib/utils';
+import {DebtType} from '@/lib/types';
+import {AddDebtSourceDialog} from '@/components/AddDebtSourceDialog';
 
 export default function DebtSourcesPage() {
-  const { debtSources, loading, deleteDebtSource } = useDebtSources();
+  const {debtSources, loading, deleteDebtSource, refetch} = useDebtSources();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<string | null>(null);
 
-  const getDebtTypeLabel = (type: DebtType) => {
-    const labels: Record<DebtType, string> = {
-      [DebtType.CREDIT]: 'Credit',
-      [DebtType.CREDIT_CARD]: 'Credit Card',
-      [DebtType.ACCOUNT_LIMIT]: 'Account Limit',
-      [DebtType.LEASING]: 'Leasing',
-      [DebtType.OTHER]: 'Other'
-    };
-    return labels[type];
-  };
-
-  const getDebtTypeColor = (type: DebtType) => {
-    const colors: Record<DebtType, string> = {
-      [DebtType.CREDIT]: 'bg-chart-2/10 text-chart-2 border-chart-2/20',
-      [DebtType.CREDIT_CARD]: 'bg-primary/10 text-primary border-primary/20',
-      [DebtType.ACCOUNT_LIMIT]: 'bg-chart-4/10 text-chart-4 border-chart-4/20',
-      [DebtType.LEASING]: 'bg-chart-3/10 text-chart-3 border-chart-3/20',
-      [DebtType.OTHER]: 'bg-muted text-muted-foreground border-border'
-    };
-    return colors[type];
-  };
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this debt source?')) {
@@ -54,7 +33,7 @@ export default function DebtSourcesPage() {
   }
 
   return (
-    <>
+    <div className="container mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -62,7 +41,7 @@ export default function DebtSourcesPage() {
           <p className="text-muted-foreground mt-1">Manage your debts and liabilities</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} size="lg" className="gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4"/>
           Add Debt Source
         </Button>
       </div>
@@ -107,13 +86,13 @@ export default function DebtSourcesPage() {
       {debtSources.length === 0 ? (
         <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-border backdrop-blur shadow-2xl">
           <CardContent className="py-16 text-center">
-            <TrendingDown className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <TrendingDown className="w-16 h-16 text-muted-foreground mx-auto mb-4"/>
             <h3 className="text-xl font-semibold text-foreground mb-2">No Debt Sources Yet</h3>
             <p className="text-muted-foreground mb-6">
               Start tracking your debts by adding your first debt source
             </p>
             <Button onClick={() => setDialogOpen(true)} size="lg" className="gap-2">
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4"/>
               Add Your First Debt
             </Button>
           </CardContent>
@@ -152,20 +131,20 @@ export default function DebtSourcesPage() {
                         setDialogOpen(true);
                       }}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4"/>
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(source._id!)}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <Trash2 className="w-4 h-4 text-destructive"/>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:flex md:justify-between gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Initial Amount</p>
                     <p className="text-lg font-semibold text-foreground">
@@ -211,10 +190,13 @@ export default function DebtSourcesPage() {
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) setEditingSource(null);
+          if (!open) {
+            setEditingSource(null);
+            refetch();
+          }
         }}
         editingId={editingSource}
       />
-    </>
+    </div>
   );
 }

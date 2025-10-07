@@ -41,13 +41,33 @@ export interface IRecord {
 
   // Snapshot of all debts this month
   debts: {
-    debtSourceId: string;          // Reference to DebtSource._id
-    amount: number;                // Current balance/debt amount
-    payment?: number;              // Optional: payment made this month
+    debtSourceId: string;
+    payment: number;
   }[];
 
   assets: number;                  // Total assets
 
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface CalculatedRecord extends IRecord {
+  totalDebt: number;
+  netWorth: number;
+  flatM2: number;
+  totalPayment: number;
+  debts: {
+    debtSourceId: string;
+    payment: number;
+    amount: number;
+  }[];
+}
+
+export interface CalculatedDebtSource extends IDebtSource {
+  currentAmount: number;
+  historyOfPayments: {
+    record: CalculatedRecord;
+    payment: number;
+    amount: number;
+  }[]
 }

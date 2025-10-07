@@ -40,14 +40,9 @@ export default async function DashboardLayout({
       label: "Debt Sources"
     },
     {
-      href: "/dashboard/payments",
-      icon: CreditCard,
-      label: "Payments"
-    },
-    {
-      href: "/dashboard/months",
+      href: "/dashboard/snapshots",
       icon: Calendar,
-      label: "Months"
+      label: "Snapshots"
     },
     {
       href: "/dashboard/stats",

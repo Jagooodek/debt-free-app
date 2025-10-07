@@ -17,13 +17,9 @@ const RecordSchema = new Schema<IRecord>(
         type: String,
         required: true
       },
-      amount: {
-        type: Number,
-        required: true
-      },
       payment: {
         type: Number,
-        required: false
+        required: true
       }
     }],
     assets: {
