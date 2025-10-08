@@ -5,6 +5,7 @@ import {TrendingDown, Home, Calendar, ArrowRight} from "lucide-react";
 import {SignedIn, SignedOut, SignInButton, SignUpButton, UserButton} from "@clerk/nextjs";
 import {auth} from "@clerk/nextjs/server";
 import {redirect} from "next/navigation";
+import Image from "next/image";
 
 export default async function LandingPage() {
 
@@ -17,8 +18,8 @@ export default async function LandingPage() {
       {/* Nav */}
       <nav className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <TrendingDown className="w-6 h-6 text-primary"/>
+          <div className="flex items-center gap-3">
+            <Image src="/icon.svg" alt="Debt-Free Logo" width={40} height={40} className="rounded-lg"/>
             <span className="text-xl font-bold text-foreground">Debt-Free</span>
           </div>
           <div className="flex gap-4">
