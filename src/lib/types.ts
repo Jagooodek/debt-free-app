@@ -60,6 +60,7 @@ export interface CalculatedRecord extends IRecord {
     debtSourceId: string;
     payment: number;
     amount: number;
+    previousAmount: number; // Amount before this payment
   }[];
 }
 

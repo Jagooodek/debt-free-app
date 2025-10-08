@@ -29,12 +29,14 @@ export function AddSnapshotDialog({
   const [month, setMonth] = useState(getCurrentMonth());
   const [assets, setAssets] = useState('');
   const [debts, setDebts] = useState<Record<string, { payment: string }>>({});
+  const [editingRecord, setEditingRecord] = useState<typeof calculatedRecords[0] | null>(null);
 
   // Initialize debts state
   useEffect(() => {
     if (editingId && open) {
       const record = calculatedRecords.find(r => r._id === editingId);
       if (record) {
+        setEditingRecord(record);
         setMonth(record.month);
         setAssets(record.assets.toString());
 
@@ -47,6 +49,7 @@ export function AddSnapshotDialog({
         setDebts(debtsMap);
       }
     } else if (!editingId && open) {
+      setEditingRecord(null);
       const debtsMap: Record<string, { payment: string }> = {};
       calculatedDebts.forEach(source => {
         debtsMap[source._id!] = {payment: Math.min(source.minMonthlyPayment, source.currentAmount).toFixed(2)};
@@ -66,24 +69,25 @@ export function AddSnapshotDialog({
         .map(([debtSourceId, values]) => {
           const debtSource = calculatedDebts.find(ds => ds._id === debtSourceId);
 
-          if(debtSource?.type === DebtType.CREDIT_CARD) {
+          if (debtSource?.type === DebtType.CREDIT_CARD) {
             return {
               debtSourceId,
               payment: debtSource.currentAmount - parseFloat(values.payment)
             }
           }
 
-          if(debtSource?.type === DebtType.ACCOUNT_LIMIT) {
-            return  {
+          if (debtSource?.type === DebtType.ACCOUNT_LIMIT) {
+            return {
               debtSourceId,
               payment: debtSource.currentAmount - (parseFloat(values.payment) - (debtSource.accountLimit as number))
             }
           }
 
           return {
-          debtSourceId,
-          payment: parseFloat(values.payment)
-        }});
+            debtSourceId,
+            payment: parseFloat(values.payment)
+          }
+        });
 
       const data = {
         month,
@@ -176,126 +180,134 @@ export function AddSnapshotDialog({
                 Enter the current balance for each debt source
               </p>
             </div>
-            {calculatedDebts.map((source) => (
-              <Card
-                key={source._id}
-                className="bg-slate-950/40 border-border backdrop-blur"
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <CardTitle className="text-xl">{source.name}</CardTitle>
-                        <Badge variant="outline" className={getDebtTypeColor(source.type)}>
-                          {getDebtTypeLabel(source.type)}
-                        </Badge>
-                        {source.canOverpay && (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                            Can Overpay
-                          </Badge>
-                        )}
+            {calculatedDebts.map((source) => {
+                // Get the previous amount for this debt source from the editing record
+                const previousAmount = editingRecord
+                  ? editingRecord.debts.find(d => d.debtSourceId === source._id)?.previousAmount ?? source.currentAmount
+                  : source.currentAmount;
+
+                return (
+                  <Card
+                    key={source._id}
+                    className="bg-slate-950/40 border-border backdrop-blur"
+                  >
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <CardTitle className="text-xl">{source.name}</CardTitle>
+                            <Badge variant="outline" className={getDebtTypeColor(source.type)}>
+                              {getDebtTypeLabel(source.type)}
+                            </Badge>
+                            {source.canOverpay && (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                Can Overpay
+                              </Badge>
+                            )}
+                          </div>
+                          {source.notes && (
+                            <CardDescription className="mt-2">{source.notes}</CardDescription>
+                          )}
+                        </div>
                       </div>
-                      {source.notes && (
-                        <CardDescription className="mt-2">{source.notes}</CardDescription>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
+                    </CardHeader>
 
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Payment */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor={`debt-${source._id}-amount`}
-                      className="text-sm text-foreground"
-                    >
-                      Previous debt
-                    </Label>
-                    <span
-                      id={`debt-${source._id}-amount`}
-                      className="bg-background border-border"
-                    >{source.currentAmount.toFixed(2) + ' zł'}</span>
-                  </div>
-                  {source.type !== DebtType.CREDIT_CARD && source.type !== DebtType.ACCOUNT_LIMIT &&
-										<div className="space-y-2">
-											<Label
-												htmlFor={`debt-${source._id}-payment`}
-												className="text-sm text-foreground"
-											>
-												Payment Made
-											</Label>
-											<Input
-												id={`debt-${source._id}-payment`}
-												type="number"
-												step="0.01"
-												placeholder="0.00"
-												min={source.minMonthlyPayment}
-												max={source.currentAmount}
-												value={debts[source._id!]?.payment || ''}
-												onChange={(e) => updateDebt(source._id!, e.target.value)}
-												className="bg-background border-border"
-											/>
-                      {source.minMonthlyPayment > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Min: {formatCurrency(source.minMonthlyPayment)}
-                        </p>
-                      )}
-										</div>}
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Payment */}
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={`debt-${source._id}-amount`}
+                          className="text-sm text-foreground"
+                        >
+                          Previous debt
+                        </Label>
+                        <span
+                          id={`debt-${source._id}-amount`}
+                          className="bg-background border-border"
+                        >{previousAmount.toFixed(2) + ' zł'}</span>
+                      </div>
+                      {source.type !== DebtType.CREDIT_CARD && source.type !== DebtType.ACCOUNT_LIMIT &&
+												<div className="space-y-2">
+													<Label
+														htmlFor={`debt-${source._id}-payment`}
+														className="text-sm text-foreground"
+													>
+														Payment Made
+													</Label>
+													<Input
+														id={`debt-${source._id}-payment`}
+														type="number"
+														step="0.01"
+														placeholder="0.00"
+														min={source.minMonthlyPayment}
+														max={previousAmount}
+														value={debts[source._id!]?.payment || ''}
+														onChange={(e) => updateDebt(source._id!, e.target.value)}
+														className="bg-background border-border"
+													/>
+                          {source.minMonthlyPayment > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Min: {formatCurrency(source.minMonthlyPayment)}
+                            </p>
+                          )}
+												</div>}
 
-                  {source.type === DebtType.CREDIT_CARD && (
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor={`debt-${source._id}-payment`}
-                        className="text-sm text-foreground"
-                      >
-                        Current Debt
-                      </Label>
-                      <Input
-                        id={`debt-${source._id}-payment`}
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        min={0}
-                        value={debts[source._id!]?.payment || ''}
-                        onChange={(e) => updateDebt(source._id!, e.target.value)}
-                        className="bg-background border-border"
-                      />
-                      {source.minMonthlyPayment > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Min: {formatCurrency(source.minMonthlyPayment)}
-                        </p>
+                      {source.type === DebtType.CREDIT_CARD && (
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`debt-${source._id}-payment`}
+                            className="text-sm text-foreground"
+                          >
+                            Current Debt
+                          </Label>
+                          <Input
+                            id={`debt-${source._id}-payment`}
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            min={0}
+                            value={debts[source._id!]?.payment || ''}
+                            onChange={(e) => updateDebt(source._id!, e.target.value)}
+                            className="bg-background border-border"
+                          />
+                          {source.minMonthlyPayment > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Min: {formatCurrency(source.minMonthlyPayment)}
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
 
-                  {source.type === DebtType.ACCOUNT_LIMIT && (
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor={`debt-${source._id}-payment`}
-                        className="text-sm text-foreground"
-                      >
-                        Current Balance
-                      </Label>
-                      <Input
-                        id={`debt-${source._id}-payment`}
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        min={0}
-                        value={debts[source._id!]?.payment || ''}
-                        onChange={(e) => updateDebt(source._id!, e.target.value)}
-                        className="bg-background border-border"
-                      />
-                      {source.minMonthlyPayment > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Min: {formatCurrency(source.minMonthlyPayment)}
-                        </p>
+                      {source.type === DebtType.ACCOUNT_LIMIT && (
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`debt-${source._id}-payment`}
+                            className="text-sm text-foreground"
+                          >
+                            Current Balance
+                          </Label>
+                          <Input
+                            id={`debt-${source._id}-payment`}
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            min={0}
+                            value={debts[source._id!]?.payment || ''}
+                            onChange={(e) => updateDebt(source._id!, e.target.value)}
+                            className="bg-background border-border"
+                          />
+                          {source.minMonthlyPayment > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Min: {formatCurrency(source.minMonthlyPayment)}
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                )
+              }
+            )}
           </div>
 
           {/* Actions */}

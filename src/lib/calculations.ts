@@ -31,6 +31,7 @@ function calculateRecord(
     debtSourceId: string;
     payment: number;
     amount: number;
+    previousAmount: number;
   }[] = [];
 
   record.debts.forEach(debt => {
@@ -39,7 +40,11 @@ function calculateRecord(
 
     const previousAmount = source.currentAmount;
     totalDebt -= debt.payment;
-    calculatedRecordDebts.push({...debt, amount: previousAmount - debt.payment});
+    calculatedRecordDebts.push({
+      ...debt,
+      previousAmount: previousAmount,
+      amount: previousAmount - debt.payment
+    });
   });
 
   const netWorth = record.assets - totalDebt;
