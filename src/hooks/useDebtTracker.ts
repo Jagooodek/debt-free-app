@@ -278,6 +278,7 @@ export function useCalculatedRecordsAndDebts() {
     createRecord: createRecordAndRefetch,
     updateRecord: updateRecordAndRefetch,
     calculatedDebts,
+    settings,
     loading,
     error,
     refetch
