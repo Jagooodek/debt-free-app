@@ -1,14 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TrendingDown, TrendingUp, Plus, Calendar, Wallet } from 'lucide-react';
 import { useCalculatedRecordsAndDebts } from '@/hooks/useDebtTracker';
 import { formatCurrency } from '@/lib/utils';
+import { AddDebtSourceDialog } from '@/components/AddDebtSourceDialog';
+import { AddSnapshotDialog } from '@/components/AddSnapshotDialog';
 
 export default function DashboardPage() {
   const { calculatedRecords, calculatedDebts, settings, loading, error } = useCalculatedRecordsAndDebts();
+  const [debtDialogOpen, setDebtDialogOpen] = useState(false);
+  const [snapshotDialogOpen, setSnapshotDialogOpen] = useState(false);
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -83,11 +90,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button size="lg" className="w-full">
+            <Button size="lg" className="w-full" onClick={() => setDebtDialogOpen(true)}>
               <Plus className="w-5 h-5 mr-2" />
               Add Your First Debt Source
             </Button>
-            <Button size="lg" variant="outline" className="w-full">
+            <Button size="lg" variant="outline" className="w-full" onClick={() => setSnapshotDialogOpen(true)}>
               <Calendar className="w-5 h-5 mr-2" />
               Record Monthly Snapshot
             </Button>
@@ -106,11 +113,11 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Track your journey to financial freedom</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setDebtDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Debt
           </Button>
-          <Button>
+          <Button onClick={() => setSnapshotDialogOpen(true)}>
             <Calendar className="w-4 h-4 mr-2" />
             New Snapshot
           </Button>
@@ -336,23 +343,33 @@ export default function DashboardPage() {
           <CardDescription>Manage your debt tracking</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setDebtDialogOpen(true)}>
             <Plus className="w-6 h-6" />
             <span className="font-semibold">Add Debt Source</span>
             <span className="text-xs text-muted-foreground">Track a new debt</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setSnapshotDialogOpen(true)}>
             <Calendar className="w-6 h-6" />
             <span className="font-semibold">New Snapshot</span>
             <span className="text-xs text-muted-foreground">Record this month</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => router.push('/dashboard/debt-sources')}>
             <Wallet className="w-6 h-6" />
             <span className="font-semibold">View All Debts</span>
             <span className="text-xs text-muted-foreground">Manage sources</span>
           </Button>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <AddDebtSourceDialog
+        open={debtDialogOpen}
+        onOpenChange={setDebtDialogOpen}
+      />
+      <AddSnapshotDialog
+        open={snapshotDialogOpen}
+        onOpenChange={setSnapshotDialogOpen}
+      />
     </div>
   );
 }

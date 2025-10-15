@@ -49,10 +49,16 @@ export function AddDebtSourceDialog({open, onOpenChange, editingId}: AddDebtSour
     if (editingId && open) {
       const source = debtSources.find(ds => ds._id === editingId);
       if (source) {
+        // For ACCOUNT_LIMIT: initialAmount is the debt, so balance = limit - debt
+        const isAccountLimit = source.type === DebtType.ACCOUNT_LIMIT;
+        const balance = isAccountLimit && source.accountLimit
+          ? source.accountLimit - source.initialAmount
+          : source.initialAmount;
+
         setFormData({
           name: source.name,
           type: source.type,
-          initialAmount: source.initialAmount.toString(),
+          initialAmount: balance.toString(),
           interestRate: source.interestRate?.toString() || '',
           minMonthlyPayment: source.minMonthlyPayment.toString(),
           canOverpay: source.canOverpay,
@@ -82,14 +88,23 @@ export function AddDebtSourceDialog({open, onOpenChange, editingId}: AddDebtSour
     setLoading(true);
 
     try {
+      const isAccountLimit = formData.type === DebtType.ACCOUNT_LIMIT;
+      const accountLimit = formData.accountLimit ? parseFloat(formData.accountLimit) : undefined;
+      const balance = parseFloat(formData.initialAmount);
+
+      // For ACCOUNT_LIMIT type: initialAmount = limit - balance (the actual debt)
+      const initialAmount = isAccountLimit && accountLimit
+        ? accountLimit - balance
+        : balance;
+
       const data = {
         name: formData.name,
         type: formData.type,
-        initialAmount: parseFloat(formData.initialAmount),
+        initialAmount,
         interestRate: formData.interestRate ? parseFloat(formData.interestRate) : undefined,
         minMonthlyPayment: parseFloat(formData.minMonthlyPayment),
         canOverpay: formData.canOverpay,
-        accountLimit: formData.accountLimit ? parseFloat(formData.accountLimit) : undefined,
+        accountLimit,
         color: formData.color,
         notes: formData.notes || undefined
       };

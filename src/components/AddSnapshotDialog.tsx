@@ -42,9 +42,20 @@ export function AddSnapshotDialog({
 
         const debtsMap: Record<string, { payment: string }> = {};
         record.debts.forEach(debt => {
-          debtsMap[debt.debtSourceId] = {
-            payment: debt.payment?.toString() || ''
-          };
+          const debtSource = calculatedDebts.find(ds => ds._id === debt.debtSourceId);
+
+          if (debtSource?.type === DebtType.ACCOUNT_LIMIT) {
+            // For account limits, show the balance that resulted in this debt amount
+            // debt.amount is the debt after payment, so balance = limit - debt.amount
+            const balance = (debtSource.accountLimit as number) - debt.amount;
+            debtsMap[debt.debtSourceId] = {
+              payment: balance.toString()
+            };
+          } else {
+            debtsMap[debt.debtSourceId] = {
+              payment: debt.payment?.toString() || ''
+            };
+          }
         });
         setDebts(debtsMap);
       }
@@ -52,7 +63,13 @@ export function AddSnapshotDialog({
       setEditingRecord(null);
       const debtsMap: Record<string, { payment: string }> = {};
       calculatedDebts.forEach(source => {
-        debtsMap[source._id!] = {payment: Math.min(source.minMonthlyPayment, source.currentAmount).toFixed(2)};
+        if (source.type === DebtType.ACCOUNT_LIMIT) {
+          // For account limits, pre-fill with current balance (limit - debt)
+          const currentBalance = (source.accountLimit as number) - source.currentAmount;
+          debtsMap[source._id!] = {payment: currentBalance.toFixed(2)};
+        } else {
+          debtsMap[source._id!] = {payment: Math.min(source.minMonthlyPayment, source.currentAmount).toFixed(2)};
+        }
       });
       setDebts(debtsMap);
       setMonth(getCurrentMonth());
@@ -70,6 +87,7 @@ export function AddSnapshotDialog({
           const debtSource = calculatedDebts.find(ds => ds._id === debtSourceId);
 
           if (debtSource?.type === DebtType.CREDIT_CARD) {
+            // For credit cards: user enters current debt, payment = previous debt - current debt
             return {
               debtSourceId,
               payment: debtSource.currentAmount - parseFloat(values.payment)
@@ -77,9 +95,17 @@ export function AddSnapshotDialog({
           }
 
           if (debtSource?.type === DebtType.ACCOUNT_LIMIT) {
+            // For account limits: user enters current balance
+            // New debt = accountLimit - currentBalance
+            // Payment = previous debt - new debt
+            const currentBalance = parseFloat(values.payment);
+            const accountLimit = debtSource.accountLimit as number;
+            const newDebt = accountLimit - currentBalance;
+            const payment = debtSource.currentAmount - newDebt;
+
             return {
               debtSourceId,
-              payment: debtSource.currentAmount - (parseFloat(values.payment) - (debtSource.accountLimit as number))
+              payment
             }
           }
 
