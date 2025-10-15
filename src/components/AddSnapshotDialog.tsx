@@ -83,6 +83,7 @@ export function AddSnapshotDialog({
 
     try {
       // Validate payments
+      const EPSILON = 0.01; // Small tolerance for floating-point comparison
       for (const [debtSourceId, values] of Object.entries(debts)) {
         const debtSource = calculatedDebts.find(ds => ds._id === debtSourceId);
         if (!debtSource) continue;
@@ -92,12 +93,12 @@ export function AddSnapshotDialog({
         // For regular debts (not CREDIT_CARD or ACCOUNT_LIMIT)
         if (debtSource.type !== DebtType.CREDIT_CARD && debtSource.type !== DebtType.ACCOUNT_LIMIT) {
           const minRequired = Math.min(debtSource.minMonthlyPayment, debtSource.currentAmount);
-          if (paymentValue < minRequired) {
+          if (paymentValue < minRequired - EPSILON) {
             alert(`Payment for ${debtSource.name} must be at least ${formatCurrency(minRequired)}`);
             setLoading(false);
             return;
           }
-          if (paymentValue > debtSource.currentAmount) {
+          if (paymentValue > debtSource.currentAmount + EPSILON) {
             alert(`Payment for ${debtSource.name} cannot exceed remaining debt of ${formatCurrency(debtSource.currentAmount)}`);
             setLoading(false);
             return;
@@ -186,7 +187,7 @@ export function AddSnapshotDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           {/* Month */}
           <div className="space-y-2">
             <Label htmlFor="month" className="text-foreground">Month *</Label>
