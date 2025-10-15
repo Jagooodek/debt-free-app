@@ -265,17 +265,21 @@ export function AddSnapshotDialog({
 														type="number"
 														step="0.01"
 														placeholder="0.00"
-														min={source.minMonthlyPayment}
+														min={Math.min(source.minMonthlyPayment, previousAmount)}
 														max={previousAmount}
 														value={debts[source._id!]?.payment || ''}
 														onChange={(e) => updateDebt(source._id!, e.target.value)}
 														className="bg-background border-border"
 													/>
-                          {source.minMonthlyPayment > 0 && (
+                          {previousAmount < source.minMonthlyPayment ? (
+                            <p className="text-xs text-amber-500">
+                              Final payment: {formatCurrency(previousAmount)} (pay off remaining debt)
+                            </p>
+                          ) : source.minMonthlyPayment > 0 ? (
                             <p className="text-xs text-muted-foreground">
                               Min: {formatCurrency(source.minMonthlyPayment)}
                             </p>
-                          )}
+                          ) : null}
 												</div>}
 
                       {source.type === DebtType.CREDIT_CARD && (
@@ -292,15 +296,20 @@ export function AddSnapshotDialog({
                             step="0.01"
                             placeholder="0.00"
                             min={0}
+                            max={previousAmount}
                             value={debts[source._id!]?.payment || ''}
                             onChange={(e) => updateDebt(source._id!, e.target.value)}
                             className="bg-background border-border"
                           />
-                          {source.minMonthlyPayment > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              Min: {formatCurrency(source.minMonthlyPayment)}
+                          {previousAmount < source.minMonthlyPayment && previousAmount > 0 ? (
+                            <p className="text-xs text-amber-500">
+                              Remaining debt is less than minimum payment - pay off completely
                             </p>
-                          )}
+                          ) : source.minMonthlyPayment > 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              Min payment: {formatCurrency(source.minMonthlyPayment)}
+                            </p>
+                          ) : null}
                         </div>
                       )}
 
