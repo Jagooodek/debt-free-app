@@ -41,9 +41,11 @@ export default function DashboardPage() {
     );
   }
 
-  const hasData = calculatedRecords.length > 0;
+  const hasRecords = calculatedRecords.length > 0;
+  const hasDebtSources = calculatedDebts.length > 0;
 
-  if (!hasData) {
+  // Show welcome message only if no debt sources at all
+  if (!hasDebtSources) {
     return (
       <div className="min-h-screen container flex mx-auto items-center justify-center p-4">
         <Card className="max-w-2xl w-full">
@@ -81,36 +83,34 @@ export default function DashboardPage() {
     );
   }
 
-  // Now safe to access records
-  const latestRecord = calculatedRecords[0];
-  const previousRecord = calculatedRecords[1];
+  // Calculate values that don't require records
+  const startingDebt = calculatedDebts.reduce((a, b) => a + b.initialAmount, 0);
+  const activeDebts = calculatedDebts.filter(d => d.isActive);
+  const minTotalPayment = activeDebts.reduce((sum, d) => sum + d.minMonthlyPayment, 0);
 
-  // Calculate trends
-  const debtChange = previousRecord
+  // Values that require records
+  const latestRecord = hasRecords ? calculatedRecords[0] : null;
+  const previousRecord = hasRecords ? calculatedRecords[1] : null;
+
+  const debtChange = previousRecord && latestRecord
     ? ((latestRecord.totalDebt - previousRecord.totalDebt) / previousRecord.totalDebt) * 100
     : 0;
-  const netWorthChange = previousRecord
+  const netWorthChange = previousRecord && latestRecord
     ? ((latestRecord.netWorth - previousRecord.netWorth) / Math.abs(previousRecord.netWorth)) * 100
     : 0;
 
-  // Calculate total debt paid (first record vs latest)
-  const startingDebt = calculatedDebts.reduce((a, b) => a + b.initialAmount, 0);
-  const totalPaidOff = startingDebt - latestRecord.totalDebt;
+  const totalPaidOff = latestRecord ? startingDebt - latestRecord.totalDebt : 0;
   const percentagePaidOff = startingDebt > 0
     ? (totalPaidOff / startingDebt) * 100
     : 0;
 
-  // Active debts only
-  const activeDebts = calculatedDebts.filter(d => d.isActive);
-
-  // Calculate average monthly payment
   const recentPayments = calculatedRecords.slice(-3).map(r => r.totalPayment);
   const avgMonthlyPayment = recentPayments.length > 0
     ? recentPayments.reduce((a, b) => a + b, 0) / recentPayments.length
     : 0;
 
-  // Estimate debt-free date
-  const monthsLeft = avgMonthlyPayment > 0 ? Math.ceil(latestRecord.totalDebt / avgMonthlyPayment) : 0;
+  const currentDebt = latestRecord ? latestRecord.totalDebt : startingDebt;
+  const monthsLeft = avgMonthlyPayment > 0 ? Math.ceil(currentDebt / avgMonthlyPayment) : 0;
   const debtFreeDate = new Date();
   debtFreeDate.setMonth(debtFreeDate.getMonth() + monthsLeft);
   const debtFreeDateStr = debtFreeDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -135,125 +135,180 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Alert banner if no snapshots yet */}
+      {!hasRecords && (
+        <Card className="bg-gradient-to-r from-amber-500/10 to-amber-600/10 border-amber-500/20">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-amber-500" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">No snapshots recorded yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Record your first monthly snapshot to start tracking your progress
+                </p>
+              </div>
+              <Button onClick={() => setSnapshotDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Snapshot
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
           <CardHeader className="pb-3">
-            <CardDescription>Total Debt</CardDescription>
-            <CardTitle className="text-3xl">{formatCurrency(latestRecord.totalDebt)}</CardTitle>
+            <CardDescription>{hasRecords ? 'Current Debt' : 'Initial Debt'}</CardDescription>
+            <CardTitle className="text-3xl">{formatCurrency(currentDebt)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {debtChange < 0 ? (
+              {hasRecords && debtChange < 0 ? (
                 <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
                   <TrendingDown className="w-3 h-3 mr-1" />
                   {Math.abs(debtChange).toFixed(1)}% decrease
                 </Badge>
-              ) : debtChange > 0 ? (
+              ) : hasRecords && debtChange > 0 ? (
                 <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   {debtChange.toFixed(1)}% increase
                 </Badge>
-              ) : (
+              ) : hasRecords ? (
                 <Badge variant="outline">No change</Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">Starting balance</Badge>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
-          <CardHeader className="pb-3">
-            <CardDescription>Net Worth</CardDescription>
-            <CardTitle className="text-3xl">{formatCurrency(latestRecord.netWorth)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {netWorthChange > 0 ? (
-                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  {netWorthChange.toFixed(1)}% increase
-                </Badge>
-              ) : netWorthChange < 0 ? (
-                <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">
-                  <TrendingDown className="w-3 h-3 mr-1" />
-                  {Math.abs(netWorthChange).toFixed(1)}% decrease
-                </Badge>
-              ) : (
-                <Badge variant="outline">No change</Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {hasRecords ? (
+          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+            <CardHeader className="pb-3">
+              <CardDescription>Net Worth</CardDescription>
+              <CardTitle className="text-3xl">{formatCurrency(latestRecord!.netWorth)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                {netWorthChange > 0 ? (
+                  <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    {netWorthChange.toFixed(1)}% increase
+                  </Badge>
+                ) : netWorthChange < 0 ? (
+                  <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">
+                    <TrendingDown className="w-3 h-3 mr-1" />
+                    {Math.abs(netWorthChange).toFixed(1)}% decrease
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">No change</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+            <CardHeader className="pb-3">
+              <CardDescription>Min. Monthly Payment</CardDescription>
+              <CardTitle className="text-3xl">{formatCurrency(minTotalPayment)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Total minimum across all debts
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
           <CardHeader className="pb-3">
             <CardDescription>Debt-Free Date</CardDescription>
-            <CardTitle className="text-3xl text-primary">{debtFreeDateStr}</CardTitle>
+            <CardTitle className="text-3xl text-primary">
+              {monthsLeft > 0 ? debtFreeDateStr : 'TBD'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {monthsLeft} months remaining
+              {monthsLeft > 0 ? `${monthsLeft} months remaining` : 'Add snapshots to estimate'}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
-          <CardHeader className="pb-3">
-            <CardDescription>Flat Equivalent</CardDescription>
-            <CardTitle className="text-3xl text-chart-3">{latestRecord.flatM2.toFixed(1)} m²</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              @ {formatCurrency(settings?.flatPricePerM2 || 11229)}/m²
-            </p>
-          </CardContent>
-        </Card>
+        {hasRecords ? (
+          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+            <CardHeader className="pb-3">
+              <CardDescription>Flat Equivalent</CardDescription>
+              <CardTitle className="text-3xl text-chart-3">{latestRecord!.flatM2.toFixed(1)} m²</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                @ {formatCurrency(settings?.flatPricePerM2 || 11229)}/m²
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+            <CardHeader className="pb-3">
+              <CardDescription>Active Debts</CardDescription>
+              <CardTitle className="text-3xl text-chart-3">{activeDebts.length}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Debt sources being tracked
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Progress Overview */}
-      <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Overall Progress</CardTitle>
-              <CardDescription>Your journey to debt freedom</CardDescription>
+      {hasRecords && (
+        <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Overall Progress</CardTitle>
+                <CardDescription>Your journey to debt freedom</CardDescription>
+              </div>
+              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                <TrendingDown className="w-3 h-3 mr-1" />
+                {percentagePaidOff.toFixed(1)}% paid off
+              </Badge>
             </div>
-            <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-              <TrendingDown className="w-3 h-3 mr-1" />
-              {percentagePaidOff.toFixed(1)}% paid off
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Paid: {formatCurrency(totalPaidOff)}</span>
-              <span className="text-muted-foreground">Remaining: {formatCurrency(latestRecord.totalDebt)}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Paid: {formatCurrency(totalPaidOff)}</span>
+                <span className="text-muted-foreground">Remaining: {formatCurrency(currentDebt)}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-primary via-emerald-400 to-emerald-500 h-3 rounded-full transition-all"
+                  style={{ width: `${Math.min(percentagePaidOff, 100)}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-muted rounded-full h-3">
-              <div
-                className="bg-gradient-to-r from-primary via-emerald-400 to-emerald-500 h-3 rounded-full transition-all"
-                style={{ width: `${Math.min(percentagePaidOff, 100)}%` }}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Avg Monthly Payment</p>
-              <p className="text-lg font-semibold">{formatCurrency(avgMonthlyPayment)}</p>
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Avg Monthly Payment</p>
+                <p className="text-lg font-semibold">{formatCurrency(avgMonthlyPayment)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Last Payment</p>
+                <p className="text-lg font-semibold">{formatCurrency(latestRecord!.totalPayment)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Active Debts</p>
+                <p className="text-lg font-semibold">{activeDebts.length}</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Last Payment</p>
-              <p className="text-lg font-semibold">{formatCurrency(latestRecord.totalPayment)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Active Debts</p>
-              <p className="text-lg font-semibold">{activeDebts.length}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Debt Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -266,8 +321,8 @@ export default function DashboardPage() {
             {activeDebts.map((debt, idx) => {
               const latestDebtRecord = debt.historyOfPayments[debt.historyOfPayments.length - 1];
               const debtAmount = latestDebtRecord?.amount || debt.currentAmount;
-              const percentage = latestRecord.totalDebt > 0
-                ? (debtAmount / latestRecord.totalDebt) * 100
+              const percentage = currentDebt > 0
+                ? (debtAmount / currentDebt) * 100
                 : 0;
 
               const colorMap: Record<string, string> = {
@@ -307,42 +362,86 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
+        {/* Recent Activity / Getting Started */}
         <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50">
           <CardHeader>
-            <CardTitle>Recent Snapshots</CardTitle>
-            <CardDescription>Last 5 months</CardDescription>
+            <CardTitle>{hasRecords ? 'Recent Snapshots' : 'Getting Started'}</CardTitle>
+            <CardDescription>{hasRecords ? 'Last 5 months' : 'Next steps'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {calculatedRecords.slice(-5).reverse().map((record) => {
-              const monthDate = new Date(record.month + '-01');
-              const monthStr = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            {hasRecords ? (
+              calculatedRecords.slice(-5).reverse().map((record) => {
+                const monthDate = new Date(record.month + '-01');
+                const monthStr = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-              return (
-                <div key={record._id} className="bg-slate-900/50 p-4 rounded-xl border border-border">
-                  <div className="flex justify-between items-start mb-3">
+                return (
+                  <div key={record._id} className="bg-slate-900/50 p-4 rounded-xl border border-border">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{monthStr}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Payment: {formatCurrency(record.totalPayment)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-foreground">{formatCurrency(record.totalDebt)}</p>
+                        <p className="text-xs text-muted-foreground">Total Debt</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        Net Worth: {formatCurrency(record.netWorth)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {record.flatM2.toFixed(1)} m²
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-border">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-primary font-semibold">1</span>
+                    </div>
                     <div>
-                      <p className="font-semibold text-foreground">{monthStr}</p>
+                      <p className="font-semibold text-foreground mb-1">Record Your First Snapshot</p>
                       <p className="text-sm text-muted-foreground">
-                        Payment: {formatCurrency(record.totalPayment)}
+                        Add a monthly snapshot to track your debt balances and assets. This will establish your starting point.
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">{formatCurrency(record.totalDebt)}</p>
-                      <p className="text-xs text-muted-foreground">Total Debt</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      Net Worth: {formatCurrency(record.netWorth)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {record.flatM2.toFixed(1)} m²
-                    </span>
                   </div>
                 </div>
-              );
-            })}
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-border">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-chart-2/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-chart-2 font-semibold">2</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground mb-1">Track Monthly Progress</p>
+                      <p className="text-sm text-muted-foreground">
+                        Update your snapshots each month to see your debt decrease and net worth grow over time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-border">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-chart-3/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-chart-3 font-semibold">3</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground mb-1">Visualize Your Journey</p>
+                      <p className="text-sm text-muted-foreground">
+                        View charts and statistics to understand your progress and stay motivated on your path to debt freedom.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
