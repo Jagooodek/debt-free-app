@@ -82,6 +82,29 @@ export function AddSnapshotDialog({
     setLoading(true);
 
     try {
+      // Validate payments
+      for (const [debtSourceId, values] of Object.entries(debts)) {
+        const debtSource = calculatedDebts.find(ds => ds._id === debtSourceId);
+        if (!debtSource) continue;
+
+        const paymentValue = parseFloat(values.payment);
+
+        // For regular debts (not CREDIT_CARD or ACCOUNT_LIMIT)
+        if (debtSource.type !== DebtType.CREDIT_CARD && debtSource.type !== DebtType.ACCOUNT_LIMIT) {
+          const minRequired = Math.min(debtSource.minMonthlyPayment, debtSource.currentAmount);
+          if (paymentValue < minRequired) {
+            alert(`Payment for ${debtSource.name} must be at least ${formatCurrency(minRequired)}`);
+            setLoading(false);
+            return;
+          }
+          if (paymentValue > debtSource.currentAmount) {
+            alert(`Payment for ${debtSource.name} cannot exceed remaining debt of ${formatCurrency(debtSource.currentAmount)}`);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const debtsArray = Object.entries(debts)
         .map(([debtSourceId, values]) => {
           const debtSource = calculatedDebts.find(ds => ds._id === debtSourceId);
@@ -265,19 +288,18 @@ export function AddSnapshotDialog({
 														type="number"
 														step="0.01"
 														placeholder="0.00"
-														min={Math.min(source.minMonthlyPayment, previousAmount)}
 														max={previousAmount}
 														value={debts[source._id!]?.payment || ''}
 														onChange={(e) => updateDebt(source._id!, e.target.value)}
 														className="bg-background border-border"
 													/>
-                          {previousAmount < source.minMonthlyPayment ? (
+                          {previousAmount <= source.minMonthlyPayment ? (
                             <p className="text-xs text-amber-500">
                               Final payment: {formatCurrency(previousAmount)} (pay off remaining debt)
                             </p>
                           ) : source.minMonthlyPayment > 0 ? (
                             <p className="text-xs text-muted-foreground">
-                              Min: {formatCurrency(source.minMonthlyPayment)}
+                              Min: {formatCurrency(source.minMonthlyPayment)} (or pay full amount)
                             </p>
                           ) : null}
 												</div>}
