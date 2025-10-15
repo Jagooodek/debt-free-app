@@ -41,10 +41,49 @@ export default function DashboardPage() {
     );
   }
 
+  const hasData = calculatedRecords.length > 0;
+
+  if (!hasData) {
+    return (
+      <div className="min-h-screen container flex mx-auto items-center justify-center p-4">
+        <Card className="max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrendingDown className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Welcome to Debt-Free Tracker!</CardTitle>
+            <CardDescription className="text-base">
+              Start your journey to financial freedom by adding your first debt sources and monthly snapshot.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button size="lg" className="w-full" onClick={() => setDebtDialogOpen(true)}>
+              <Plus className="w-5 h-5 mr-2" />
+              Add Your First Debt Source
+            </Button>
+            <Button size="lg" variant="outline" className="w-full" onClick={() => setSnapshotDialogOpen(true)}>
+              <Calendar className="w-5 h-5 mr-2" />
+              Record Monthly Snapshot
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Dialogs */}
+        <AddDebtSourceDialog
+          open={debtDialogOpen}
+          onOpenChange={setDebtDialogOpen}
+        />
+        <AddSnapshotDialog
+          open={snapshotDialogOpen}
+          onOpenChange={setSnapshotDialogOpen}
+        />
+      </div>
+    );
+  }
+
+  // Now safe to access records
   const latestRecord = calculatedRecords[0];
   const previousRecord = calculatedRecords[1];
-  const hasData = calculatedRecords.length > 0;
-  console.log(latestRecord, previousRecord);
 
   // Calculate trends
   const debtChange = previousRecord
@@ -75,34 +114,6 @@ export default function DashboardPage() {
   const debtFreeDate = new Date();
   debtFreeDate.setMonth(debtFreeDate.getMonth() + monthsLeft);
   const debtFreeDateStr = debtFreeDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-  if (!hasData) {
-    return (
-      <div className="min-h-screen container flex mx-auto items-center justify-center p-4">
-        <Card className="max-w-2xl w-full">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <TrendingDown className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Welcome to Debt-Free Tracker!</CardTitle>
-            <CardDescription className="text-base">
-              Start your journey to financial freedom by adding your first debt sources and monthly snapshot.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button size="lg" className="w-full" onClick={() => setDebtDialogOpen(true)}>
-              <Plus className="w-5 h-5 mr-2" />
-              Add Your First Debt Source
-            </Button>
-            <Button size="lg" variant="outline" className="w-full" onClick={() => setSnapshotDialogOpen(true)}>
-              <Calendar className="w-5 h-5 mr-2" />
-              Record Monthly Snapshot
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 container mx-auto p-6">
